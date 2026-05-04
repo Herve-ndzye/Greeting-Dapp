@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculator DApp</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      width: 360px;
+      box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    h1 { font-size: 1rem; font-weight: 600; color: #111; }
+
+    .btn-connect {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1.5px solid #e0e0e0;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-connect:hover { border-color: #111; color: #111; }
+    .btn-connect.on { border-color: #18c768; color: #18c768; }
+
+    /* Main result display */
+    .display {
+      background: #f5f5f3;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 10px;
+      text-align: right;
+    }
+    .display-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    .display-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 2.2rem;
+      font-weight: 500;
+      color: #111;
+    }
+
+    /* prev x / y row */
+    .prev-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .prev-box {
+      background: #f5f5f3;
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-align: right;
+    }
+    .prev-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: #bbb;
+      margin-bottom: 2px;
+    }
+    .prev-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #999;
+    }
+
+    .inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    input[type=number] {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.95rem;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 10px;
+      background: #fff;
+      color: #111;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type=number]:focus { border-color: #111; }
+    input[type=number]::placeholder { color: #ccc; }
+
+    .ops {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .btn-op {
+      padding: 12px 0;
+      font-family: 'DM Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 500;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 10px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-op:hover { border-color: #111; color: #111; }
+    .btn-op.active { background: #111; color: #fff; border-color: #111; }
+
+    .btn-run {
+      width: 100%;
+      padding: 13px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-bottom: 10px;
+    }
+    .btn-run:hover { opacity: 0.8; }
+    .btn-run:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-fetch {
+      width: 100%;
+      padding: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 10px;
+      background: #fff;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 16px;
+    }
+    .btn-fetch:hover { border-color: #111; color: #111; }
+
+    .log {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: #aaa;
+      min-height: 18px;
+      text-align: center;
+    }
+    .log.err { color: #e04040; }
+    .log.ok  { color: #18c768; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="top">
+    <h1>Calculator DApp</h1>
+    <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect</button>
+  </div>
+
+  <!-- Main result -->
+  <div class="display">
+    <div class="display-label">result</div>
+    <div class="display-value" id="result">—</div>
+  </div>
+
+  <!-- Previous x (A) and y (B) -->
+  <div class="prev-row">
+    <div class="prev-box">
+      <div class="prev-label">prev A (x)</div>
+      <div class="prev-value" id="prevX">—</div>
+    </div>
+    <div class="prev-box">
+      <div class="prev-label">prev B (y)</div>
+      <div class="prev-value" id="prevY">—</div>
+    </div>
+  </div>
+
+  <div class="inputs">
+    <input type="number" id="inputA" placeholder="A" min="0"/>
+    <input type="number" id="inputB" placeholder="B" min="0"/>
+  </div>
+
+  <div class="ops">
+    <button class="btn-op" id="op-add"      onclick="pick('add')">+</button>
+    <button class="btn-op" id="op-minus"    onclick="pick('minus')">−</button>
+    <button class="btn-op" id="op-multiply" onclick="pick('multiply')">×</button>
+    <button class="btn-op" id="op-divide"   onclick="pick('divide')">÷</button>
+  </div>
+
+  <button class="btn-run" id="runBtn" onclick="execute()" disabled>Run</button>
+  <button class="btn-fetch" onclick="fetchAnswer()">↻ Fetch stored result</button>
+
+  <div class="log" id="log">connect your wallet to start</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+<script>
+  let web3, contract, accounts, op = null;
+
+  const contractAddress = "0x955D291d157d852AB46745445Cb22b77741Bd590";
+
+  const abi = [
+    { "inputs": [], "stateMutability": "nonpayable", "type": "constructor" },
+    {
+      "inputs": [], "name": "result",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view", "type": "function"
+    },
+    {
+      "inputs": [], "name": "x",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view", "type": "function"
+    },
+    {
+      "inputs": [], "name": "y",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view", "type": "function"
+    },
+    {
+      "inputs": [], "name": "answer",
+      "outputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" },
+        { "internalType": "uint256", "name": "", "type": "uint256" },
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "stateMutability": "view", "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "a", "type": "uint256" },
+        { "internalType": "uint256", "name": "b", "type": "uint256" }
+      ],
+      "name": "add",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "nonpayable", "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "a", "type": "uint256" },
+        { "internalType": "uint256", "name": "b", "type": "uint256" }
+      ],
+      "name": "minus",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "nonpayable", "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "a", "type": "uint256" },
+        { "internalType": "uint256", "name": "b", "type": "uint256" }
+      ],
+      "name": "multiply",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "nonpayable", "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "a", "type": "uint256" },
+        { "internalType": "uint256", "name": "b", "type": "uint256" }
+      ],
+      "name": "divide",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "nonpayable", "type": "function"
+    }
+  ];
+
+  const log = (msg, type = '') => {
+    const el = document.getElementById('log');
+    el.textContent = msg;
+    el.className = 'log ' + type;
+  };
+
+  // answer() returns { 0: result, 1: x, 2: y }
+  function updateDisplay(res) {
+    document.getElementById('result').textContent = res[0];
+    document.getElementById('prevX').textContent  = res[1];
+    document.getElementById('prevY').textContent  = res[2];
+  }
+
+  function pick(name) {
+    op = name;
+    document.querySelectorAll('.btn-op').forEach(b => b.classList.remove('active'));
+    document.getElementById('op-' + name).classList.add('active');
+  }
+
+  async function connectWallet() {
+    if (!window.ethereum) return log('MetaMask not found', 'err');
+    web3 = new Web3(window.ethereum);
+    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    contract = new web3.eth.Contract(abi, contractAddress);
+    const btn = document.getElementById('connectBtn');
+    btn.textContent = accounts[0].slice(0, 6) + '…' + accounts[0].slice(-4);
+    btn.classList.add('on');
+    document.getElementById('runBtn').disabled = false;
+    log('connected', 'ok');
+    fetchAnswer();
+  }
+
+  async function execute() {
+    if (!op) return log('select an operation', 'err');
+    const a = document.getElementById('inputA').value;
+    const b = document.getElementById('inputB').value;
+    if (a === '' || b === '') return log('enter values for A and B', 'err');
+    if (op === 'divide' && +b === 0) return log('cannot divide by zero', 'err');
+    if (op === 'minus'  && +a < +b)  return log('result would underflow (A < B)', 'err');
+    try {
+      log('sending…');
+      document.getElementById('runBtn').disabled = true;
+      await contract.methods[op](a, b).send({ from: accounts[0] });
+      await fetchAnswer();
+      log('done', 'ok');
+    } catch (e) {
+      log(e.message.slice(0, 60), 'err');
+    } finally {
+      document.getElementById('runBtn').disabled = false;
+    }
+  }
+
+  async function fetchAnswer() {
+    if (!contract) return log('connect your wallet first', 'err');
+    try {
+      // returns object { 0: result, 1: x, 2: y }
+      const res = await contract.methods.answer().call();
+      updateDisplay(res);
+      log('fetched', 'ok');
+    } catch (e) {
+      log(e.message.slice(0, 60), 'err');
+    }
+  }
+</script>
+</body>
+</html>
